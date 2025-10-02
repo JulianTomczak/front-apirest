@@ -63,8 +63,8 @@ export default function UsuariosPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-400 to-indigo-500 p-4">
       <div className="bg-white rounded-xl shadow-lg w-full max-w-5xl p-8">
         {/* Botones superior */}
-        <div className="flex justify-between mb-6">
-          <div className="flex gap-2">
+        <div className="flex justify-between mb-6 flex-col sm:flex-row gap-4 sm:gap-0">
+          <div className="flex gap-2 justify-center sm:justify-start">
             <button onClick={() => router.push("/")} className="btn-secondary">← Volver</button>
             <button onClick={() => setShowUserModal(true)} className="btn-modern">➕ Nuevo Usuario</button>
           </div>
@@ -82,33 +82,91 @@ export default function UsuariosPage() {
         <div className="tareas-grid mb-6">
           {usuarios.length > 0 ? (
             usuarios.map((u, i) => (
-              <div key={u.id} className="tarea-card pendiente fade-slide-up relative" style={{ animationDelay: `${0.1 + i * 0.1}s` }}>
-                <p><strong>ID:</strong> {u.id}</p>
-                <p><strong>Nombre:</strong> {u.name}</p>
-                <p><strong>Email:</strong> {u.mail}</p>
-                <div className="flex justify-end mt-2">
+              <div key={u.id} className="tarea-card pendiente fade-slide-up" style={{ animationDelay: `${0.1 + i * 0.1}s` }}>
+
+                {/* Header con ID */}
+                <div className="tarea-card-header">
+                  <div className="tarea-field">
+                    <span className="tarea-label">Usuario ID</span>
+                    <span className="tarea-value title">#{u.id}</span>
+                  </div>
+                </div>
+
+                {/* Contenido del usuario */}
+                <div className="tarea-card-content">
+                  <div className="tarea-field">
+                    <span className="tarea-label">Nombre</span>
+                    <span className="tarea-value description">{u.name}</span>
+                  </div>
+
+                  <div className="tarea-field">
+                    <span className="tarea-label">Email</span>
+                    <span className="tarea-value">
+                      📧 {u.mail}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Acciones */}
+                <div className="tarea-actions">
                   <button
+                    className="btn-action btn-eliminar"
                     onClick={() => setConfirmDeleteId(u.id)}
-                    className="bg-red-500 hover:bg-red-600 text-white font-semibold px-3 py-1 rounded-md shadow-sm text-sm"
                   >
-                    Eliminar
+                    🗑️ Eliminar
                   </button>
                 </div>
               </div>
             ))
           ) : (
-            <div className="estadistica-card text-center fade-slide-up">
-              <span className="estadistica-label">No hay usuarios</span>
-            </div>
+            !loading && (
+              <div className="col-span-full text-center py-12">
+                <div className="text-4xl mb-4">👥</div>
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  No hay usuarios registrados
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  Comienza agregando el primer usuario al sistema
+                </p>
+                <button
+                  onClick={() => setShowUserModal(true)}
+                  className="btn-modern"
+                >
+                  ➕ Crear Primer Usuario
+                </button>
+              </div>
+            )
           )}
         </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="loading-pulse mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando usuarios...</p>
+          </div>
+        )}
 
         {/* Paginación */}
         {paginatedData && paginatedData.totalPages > 1 && (
           <div className="pagination-controls">
-            <button onClick={handlePreviousPage} disabled={currentPage === 0} className="btn-modern">Anterior</button>
-            <span className="pagination-text">Página {currentPage + 1} de {paginatedData.totalPages}</span>
-            <button onClick={handleNextPage} disabled={paginatedData.last} className="btn-modern">Siguiente</button>
+            <button
+              onClick={handlePreviousPage}
+              disabled={currentPage === 0}
+              className="btn-modern"
+            >
+              ← Anterior
+            </button>
+            <span className="pagination-text">
+              Página {currentPage + 1} de {paginatedData.totalPages}
+            </span>
+            <button
+              onClick={handleNextPage}
+              disabled={paginatedData.last}
+              className="btn-modern"
+            >
+              Siguiente →
+            </button>
           </div>
         )}
       </div>

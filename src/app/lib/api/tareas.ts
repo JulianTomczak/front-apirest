@@ -1,4 +1,4 @@
-import { PaginatedTasks, TaskRequestDTO, TaskResponseDTO } from "../../types/task";
+import { PaginatedTasks, TaskRequestDTO, TaskResponseDTO, TaskUpdateDTO } from "../../types/task";
 
 const API_URL = "http://localhost:8080";
 
@@ -88,6 +88,48 @@ export async function filterTareas(
 
   if (!res.ok) {
     throw new Error(`Error ${res.status}: ${res.statusText}`);
+  }
+
+  return res.json();
+}
+
+export async function updateTarea(id: number, task: TaskUpdateDTO, token?: string): Promise<TaskResponseDTO> {
+  const t = token ?? localStorage.getItem("token");
+  if (!t) throw new Error("No autenticado");
+
+  const res = await fetch(`${API_URL}/tareas/${id}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${t}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(task),
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || `Error al actualizar tarea con id ${id}`);
+  }
+
+  return res.json();
+}
+
+export async function patchTarea(id: number, task: TaskUpdateDTO, token?: string): Promise<TaskResponseDTO> {
+  const t = token ?? localStorage.getItem("token");
+  if (!t) throw new Error("No autenticado");
+
+  const res = await fetch(`${API_URL}/tareas/${id}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${t}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(task),
+  });
+
+  if (!res.ok) {
+    const msg = await res.text();
+    throw new Error(msg || `Error al actualizar parcialmente tarea con id ${id}`);
   }
 
   return res.json();

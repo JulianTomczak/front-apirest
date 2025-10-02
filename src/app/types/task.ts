@@ -58,3 +58,10 @@ export interface TaskResponseDTO {
     createdAt: string;
     user: User;
 }
+
+export interface TaskUpdateDTO {
+  title?: string;
+  description?: string;
+  completed?: boolean;
+  dueDate?: string; // ISO date string
+}

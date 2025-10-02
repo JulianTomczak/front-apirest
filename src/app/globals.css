@@ -366,3 +366,448 @@ body {
 .animate-fadeIn {
   animation: fadeIn 0.3s ease forwards;
 }
+
+/* ===== MEJORAS RESPONSIVE Y TARJETAS ===== */
+
+/* Mejoras para texto en tarjetas */
+.tarea-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tarea-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tarea-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tarea-value {
+  font-size: 0.9rem;
+  color: var(--foreground);
+  line-height: 1.4;
+}
+
+.tarea-value.title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.5rem;
+}
+
+.tarea-value.description {
+  background: rgba(99, 102, 241, 0.05);
+  padding: 0.75rem;
+  border-radius: 8px;
+  border-left: 3px solid var(--primary);
+}
+
+/* Estado en esquina superior derecha */
+.tarea-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.tarea-estado-corner {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+}
+
+/* Mejoras responsive para filtros */
+.filtros-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.filtro-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filtro-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.filtro-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.filtro-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Botones de acción mejorados */
+.tarea-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+  justify-content: center;
+  min-width: 120px;
+}
+
+.btn-editar {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.btn-completar {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.btn-eliminar {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.btn-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-editar:hover {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-completar:hover {
+  background: #10b981;
+  color: white;
+}
+
+.btn-eliminar:hover {
+  background: #ef4444;
+  color: white;
+}
+
+/* Responsive mejorado */
+@media (max-width: 768px) {
+  .tareas-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .tareas-header {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .tareas-title {
+    font-size: 1.75rem;
+  }
+  
+  .app-container {
+    padding: 10px;
+  }
+  
+  .estadisticas {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+  
+  .estadistica-card {
+    padding: 1rem;
+  }
+  
+  .estadistica-valor {
+    font-size: 1.5rem;
+  }
+  
+  .filtros-container {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .tarea-actions {
+    flex-direction: column;
+  }
+  
+  .btn-action {
+    min-width: auto;
+  }
+  
+  .pagination-controls {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  /* Botones superiores en columna en móvil */
+  .flex.justify-between.mb-6 {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .flex.justify-between.mb-6 > div {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .tareas-header {
+    padding: 1rem;
+    border-radius: 16px;
+  }
+  
+  .tareas-title {
+    font-size: 1.5rem;
+  }
+  
+  .estadisticas {
+    grid-template-columns: 1fr;
+  }
+  
+  .tarea-card {
+    padding: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .tarea-estado-corner {
+    position: relative;
+    top: auto;
+    right: auto;
+    align-self: flex-end;
+  }
+  
+  .tarea-card-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+/* Mejora para el contenedor principal en móvil */
+@media (max-width: 640px) {
+  .bg-white.rounded-xl.shadow-lg {
+    margin: 0.5rem;
+    padding: 1.5rem;
+  }
+}
+
+/* Animaciones mejoradas */
+.tarea-card {
+  animation: slideInUp 0.5s ease forwards;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading states */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ===== ESTADÍSTICAS MEJORADAS ===== */
+.estadisticas-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.estadistica-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 1.5rem;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.estadistica-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  transition: height 0.3s ease;
+}
+
+.estadistica-card:hover::before {
+  height: 6px;
+}
+
+.estadistica-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+}
+
+.estadistica-icono {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin: 0 auto 1rem;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.estadistica-completadas .estadistica-icono {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+.estadistica-pendientes .estadistica-icono {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning);
+}
+
+.estadistica-paginas .estadistica-icono {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.estadistica-valor {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.estadistica-completadas .estadistica-valor {
+  background: linear-gradient(135deg, var(--success), #059669);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.estadistica-pendientes .estadistica-valor {
+  background: linear-gradient(135deg, var(--warning), #d97706);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.estadistica-paginas .estadistica-valor {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.estadistica-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.estadistica-tendencia {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 20px;
+  margin-top: 0.5rem;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success);
+}
+
+/* Responsive para estadísticas */
+@media (max-width: 768px) {
+  .estadisticas-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .estadistica-card {
+    padding: 1.25rem;
+  }
+  
+  .estadistica-valor {
+    font-size: 2rem;
+  }
+  
+  .estadistica-icono {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+    margin-bottom: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .estadisticas-container {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .estadistica-card {
+    padding: 1rem;
+  }
+  
+  .estadistica-valor {
+    font-size: 1.75rem;
+  }
+}
