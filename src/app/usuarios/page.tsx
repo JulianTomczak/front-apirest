@@ -1,29 +1,47 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getUsuarios, deleteUsuario } from "../lib/api/usuarios";
-import { User, PaginatedUsers } from "../types/user";
 import { useRouter } from "next/navigation";
+import { getUsuarios, deleteUsuario } from "../lib/api/usuarios";
+import { UserResponseDTO, PaginatedUsers } from "../types/user";
 import UserFormModal from "../components/UserFormModal";
+import UserEditModal from "../components/UserEditModal";
 import ConfirmModal from "../components/ConfirmModal";
 
 export default function UsuariosPage() {
   const router = useRouter();
-  const [usuarios, setUsuarios] = useState<User[]>([]);
+
+  const [usuarios, setUsuarios] = useState<UserResponseDTO[]>([]);
   const [paginatedData, setPaginatedData] = useState<PaginatedUsers | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [editUser, setEditUser] = useState<UserResponseDTO | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
-  const token = localStorage.getItem("token");
+  //  Cargar token solo en cliente
+  useEffect(() => {
+    const t = localStorage.getItem("token");
+    if (!t) {
+      router.replace("/login");
+      return;
+    }
+    setToken(t);
+  }, [router]);
 
+  // Cargar usuarios
   const loadUsuarios = async () => {
+    if (!token) return;
     try {
       setLoading(true);
-      const data: PaginatedUsers = await getUsuarios(currentPage);
-      setUsuarios(data.content);
+      const data: PaginatedUsers = await getUsuarios(currentPage, 10, token);
+      const usuariosConRole: UserResponseDTO[] = data.content.map(u => ({
+        ...u,
+        role: u.role ?? "USER",
+      }));
+      setUsuarios(usuariosConRole);
       setPaginatedData(data);
     } catch (err) {
       setError((err as Error).message);
@@ -33,15 +51,13 @@ export default function UsuariosPage() {
   };
 
   useEffect(() => {
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-    loadUsuarios();
-  }, [currentPage, router]);
+    if (token) loadUsuarios();
+  }, [currentPage, token]);
 
   const handlePreviousPage = () => currentPage > 0 && setCurrentPage(currentPage - 1);
-  const handleNextPage = () => paginatedData && !paginatedData.last && setCurrentPage(currentPage + 1);
+  const handleNextPage = () =>
+    paginatedData && !paginatedData.last && setCurrentPage(currentPage + 1);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     router.replace("/login");
@@ -65,10 +81,16 @@ export default function UsuariosPage() {
         {/* Botones superior */}
         <div className="flex justify-between mb-6 flex-col sm:flex-row gap-4 sm:gap-0">
           <div className="flex gap-2 justify-center sm:justify-start">
-            <button onClick={() => router.push("/")} className="btn-secondary">← Volver</button>
-            <button onClick={() => setShowUserModal(true)} className="btn-modern">➕ Nuevo Usuario</button>
+            <button onClick={() => router.push("/")} className="btn-secondary">
+              ← Volver
+            </button>
+            <button onClick={() => setShowUserModal(true)} className="btn-modern">
+              ➕ Nuevo Usuario
+            </button>
           </div>
-          <button onClick={handleLogout} className="btn-important">Desconectarse</button>
+          <button onClick={handleLogout} className="btn-important">
+            Desconectarse
+          </button>
         </div>
 
         {/* Header */}
@@ -82,9 +104,11 @@ export default function UsuariosPage() {
         <div className="tareas-grid mb-6">
           {usuarios.length > 0 ? (
             usuarios.map((u, i) => (
-              <div key={u.id} className="tarea-card pendiente fade-slide-up" style={{ animationDelay: `${0.1 + i * 0.1}s` }}>
-
-                {/* Header con ID */}
+              <div
+                key={u.id}
+                className="tarea-card pendiente fade-slide-up"
+                style={{ animationDelay: `${0.1 + i * 0.1}s` }}
+              >
                 <div className="tarea-card-header">
                   <div className="tarea-field">
                     <span className="tarea-label">Usuario ID</span>
@@ -92,23 +116,28 @@ export default function UsuariosPage() {
                   </div>
                 </div>
 
-                {/* Contenido del usuario */}
                 <div className="tarea-card-content">
                   <div className="tarea-field">
                     <span className="tarea-label">Nombre</span>
                     <span className="tarea-value description">{u.name}</span>
                   </div>
-
                   <div className="tarea-field">
                     <span className="tarea-label">Email</span>
-                    <span className="tarea-value">
-                      📧 {u.mail}
-                    </span>
+                    <span className="tarea-value">📧 {u.mail}</span>
+                  </div>
+                  <div className="tarea-field">
+                    <span className="tarea-label">Rol</span>
+                    <span className="tarea-value">{u.role === "ADMIN" ? "Administrador" : "Usuario"}</span>
                   </div>
                 </div>
 
-                {/* Acciones */}
-                <div className="tarea-actions">
+                <div className="tarea-actions flex gap-2">
+                  <button
+                    className="btn-action btn-editar"
+                    onClick={() => setEditUser(u)}
+                  >
+                    ✏️ Editar
+                  </button>
                   <button
                     className="btn-action btn-eliminar"
                     onClick={() => setConfirmDeleteId(u.id)}
@@ -172,7 +201,21 @@ export default function UsuariosPage() {
       </div>
 
       {/* Modal para crear usuario */}
-      {showUserModal && <UserFormModal onSuccess={loadUsuarios} onClose={() => setShowUserModal(false)} />}
+      {showUserModal && (
+        <UserFormModal
+          onSuccess={loadUsuarios}
+          onClose={() => setShowUserModal(false)}
+        />
+      )}
+
+      {/* Modal para editar usuario */}
+      {editUser && (
+        <UserEditModal
+          user={editUser}
+          onSuccess={loadUsuarios}
+          onClose={() => setEditUser(null)}
+        />
+      )}
 
       {/* Modal de confirmación para eliminar */}
       {confirmDeleteId !== null && (

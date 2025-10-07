@@ -44,3 +44,24 @@ export async function createUsuario(user: { name: string; password: string; mail
 
   return res.json();
 }
+
+export async function updateUsuario(
+  id: number,
+  user: { name: string; password: string; mail: string; role: string },
+  token?: string
+) {
+  const res = await fetch(`${API_URL}/usuarios/${id}`, {
+    method: "PUT",
+    headers: {
+      "Authorization": `Bearer ${token ?? localStorage.getItem("token")}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(user),
+  });
+
+  if (!res.ok) {
+    throw new Error("Error al actualizar usuario");
+  }
+
+  return res.json();
+}

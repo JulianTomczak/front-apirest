@@ -5,7 +5,7 @@ export interface User {
 }
 
 export interface PaginatedUsers {
-  content: User[];
+  content: UserResponseDTO[];
   totalPages: number;
   totalElements: number;
   size: number;
@@ -17,6 +17,13 @@ export interface PaginatedUsers {
 export interface UserRequestDTO {
   name: string;
   password: string;
+  mail: string;
+  role: "USER" | "ADMIN";
+}
+
+export interface UserResponseDTO {
+  id: number;
+  name: string;
   mail: string;
   role: "USER" | "ADMIN";
 }
