@@ -39,7 +39,8 @@ export async function createUsuario(user: { name: string; password: string; mail
   });
 
   if (!res.ok) {
-    throw new Error("Error al crear usuario");
+    const msg = await res.text();
+    throw new Error(msg || `Error al crear usuario`);
   }
 
   return res.json();
@@ -50,17 +51,21 @@ export async function updateUsuario(
   user: { name: string; password: string; mail: string; role: string },
   token?: string
 ) {
+  const t = token ?? localStorage.getItem("token");
+  if (!t) throw new Error("No autenticado");
+
   const res = await fetch(`${API_URL}/usuarios/${id}`, {
     method: "PUT",
     headers: {
-      "Authorization": `Bearer ${token ?? localStorage.getItem("token")}`,
+      "Authorization": `Bearer ${t}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(user),
   });
 
   if (!res.ok) {
-    throw new Error("Error al actualizar usuario");
+    const msg = await res.text();
+    throw new Error(msg || `Error al actualizar usuario con id ${id}`);
   }
 
   return res.json();
