@@ -37,12 +37,11 @@ export async function createTarea(task: TaskRequestDTO, userId?: number): Promis
     body: JSON.stringify(task),
   });
 
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(msg || "Error al crear tarea");
-  }
+  const data = await res.json();
 
-  return res.json();
+  if (!res.ok) throw data;
+
+  return data;
 }
 
 export async function deleteTarea(id: number, token?: string) {
@@ -106,12 +105,11 @@ export async function updateTarea(id: number, task: TaskUpdateDTO, token?: strin
     body: JSON.stringify(task),
   });
 
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(msg || `Error al actualizar tarea con id ${id}`);
-  }
+  const data = await res.json();
 
-  return res.json();
+  if (!res.ok) throw data;
+
+  return data;
 }
 
 export async function patchTarea(id: number, task: TaskUpdateDTO, token?: string): Promise<TaskResponseDTO> {

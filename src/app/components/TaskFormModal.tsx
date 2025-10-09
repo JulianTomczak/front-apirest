@@ -24,7 +24,9 @@ export default function TaskFormModal({ onClose, onSuccess }: TaskFormModalProps
     dueDate: "",
     userId: 0, // solo para ADMIN
   });
-  const [error, setError] = useState<string | null>(null);
+
+  // Errores por campo
+  const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [role, setRole] = useState<"USER" | "ADMIN">("USER");
@@ -35,30 +37,39 @@ export default function TaskFormModal({ onClose, onSuccess }: TaskFormModalProps
     const decoded = jwtDecode<DecodedToken>(token);
     setRole(decoded.role);
     if (decoded.role === "ADMIN") {
-      // si es admin, cargamos todos los usuarios
       getUsuarios().then(data => setUsers(data.content));
     }
   }, [token]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+
+    // Limpiar error del campo mientras el usuario escribe
+    setErrors({ ...errors, [name]: undefined });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
 
-    setError(null);
+    setErrors({});
     setLoading(true);
 
     try {
-      // si es USER, enviamos "me" como placeholder y el backend usa el ID del token
       const userId = role === "ADMIN" ? form.userId : undefined;
       await createTarea({ ...form }, userId);
       onSuccess();
       onClose();
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      // Si el backend devuelve errores por campo
+      if (err && typeof err === "object") {
+        setErrors(err);
+      } else {
+        setErrors({ title: "Error desconocido" });
+      }
     } finally {
       setLoading(false);
     }
@@ -75,47 +86,64 @@ export default function TaskFormModal({ onClose, onSuccess }: TaskFormModalProps
         </button>
         <h2 className="text-2xl font-bold text-purple-700 mb-4 text-center">Crear Tarea</h2>
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="title"
-            placeholder="Título de la tarea"
-            value={form.title}
-            onChange={handleChange}
-            className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            required
-          />
-          <textarea
-            name="description"
-            placeholder="Descripción"
-            value={form.description}
-            onChange={handleChange}
-            className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
-          <input
-            type="date"
-            name="dueDate"
-            value={form.dueDate}
-            onChange={handleChange}
-            className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            required
-          />
+          <div>
+            <input
+              type="text"
+              name="title"
+              placeholder="Título de la tarea"
+              value={form.title}
+              onChange={handleChange}
+              className={`border rounded p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 w-full ${
+                errors.title ? "border-red-500" : ""
+              }`}
+            />
+            {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
+          </div>
+
+          <div>
+            <textarea
+              name="description"
+              placeholder="Descripción"
+              value={form.description}
+              onChange={handleChange}
+              className={`border rounded p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 w-full ${
+                errors.description ? "border-red-500" : ""
+              }`}
+            />
+            {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+          </div>
+
+          <div>
+            <input
+              type="date"
+              name="dueDate"
+              value={form.dueDate}
+              onChange={handleChange}
+              className={`border rounded p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 w-full ${
+                errors.dueDate ? "border-red-500" : ""
+              }`}
+            />
+            {errors.dueDate && <p className="text-red-500 text-sm mt-1">{errors.dueDate}</p>}
+          </div>
 
           {role === "ADMIN" && (
-            <select
-              name="userId"
-              value={form.userId}
-              onChange={handleChange}
-              className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              required
-            >
-              <option value={0}>Selecciona un usuario</option>
-              {users.map(u => (
-                <option key={u.id} value={u.id}>{u.name} ({u.mail})</option>
-              ))}
-            </select>
+            <div>
+              <select
+                name="userId"
+                value={form.userId}
+                onChange={handleChange}
+                className={`border rounded p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 w-full ${
+                  errors.userId ? "border-red-500" : ""
+                }`}
+              >
+                <option value={0}>Selecciona un usuario</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.name} ({u.mail})</option>
+                ))}
+              </select>
+              {errors.userId && <p className="text-red-500 text-sm mt-1">{errors.userId}</p>}
+            </div>
           )}
-
-          {error && <p className="text-red-500 text-sm">{error}</p>}
 
           <button
             type="submit"

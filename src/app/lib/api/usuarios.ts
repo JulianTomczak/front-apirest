@@ -38,12 +38,11 @@ export async function createUsuario(user: { name: string; password: string; mail
     body: JSON.stringify(user),
   });
 
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(msg || `Error al crear usuario`);
-  }
+  const data = await res.json();
 
-  return res.json();
+  if (!res.ok) throw data;
+
+  return data;
 }
 
 export async function updateUsuario(
@@ -63,10 +62,9 @@ export async function updateUsuario(
     body: JSON.stringify(user),
   });
 
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(msg || `Error al actualizar usuario con id ${id}`);
-  }
+  const data = await res.json();
 
-  return res.json();
+  if (!res.ok) throw data;
+
+  return data;
 }

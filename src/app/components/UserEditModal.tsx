@@ -17,7 +17,9 @@ export default function UserEditModal({ user, onClose, onSuccess }: UserEditModa
     password: "",
     role: user.role,
   });
-  const [error, setError] = useState<string | null>(null);
+
+  // Estado de errores por campo
+  const [errors, setErrors] = useState<Partial<Record<keyof UserRequestDTO, string>>>({});
   const [loading, setLoading] = useState(false);
 
   const token = localStorage.getItem("token");
@@ -29,26 +31,34 @@ export default function UserEditModal({ user, onClose, onSuccess }: UserEditModa
       password: "",
       role: user.role,
     });
+    setErrors({});
   }, [user]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    // Limpiar error del campo mientras el usuario escribe
+    setErrors({ ...errors, [e.target.name]: undefined });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
-    setError(null);
+
+    setErrors({});
     setLoading(true);
 
     try {
       await updateUsuario(user.id, form);
       onSuccess();
       onClose();
-    } catch (err) {
-      setError((err as Error).message);
+    } catch (err: any) {
+      if (err && typeof err === "object") {
+        setErrors(err); // mostrar errores por campo
+      } else {
+        setErrors({ name: "Error desconocido" });
+      }
     } finally {
       setLoading(false);
     }
@@ -67,44 +77,60 @@ export default function UserEditModal({ user, onClose, onSuccess }: UserEditModa
           Editar Usuario
         </h2>
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="name"
-            placeholder="Nombre completo"
-            value={form.name}
-            onChange={handleChange}
-            className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
-          <input
-            type="email"
-            name="mail"
-            placeholder="Correo electrónico"
-            value={form.mail}
-            onChange={handleChange}
-            className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Nueva contraseña"
-            value={form.password}
-            onChange={handleChange}
-            className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-          />
+          <div>
+            <input
+              type="text"
+              name="name"
+              placeholder="Nombre completo"
+              value={form.name}
+              onChange={handleChange}
+              className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 w-full"
+            />
+            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+          </div>
 
-          <select
-            name="role"
-            value={form.role}
-            onChange={handleChange}
-            className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          <div>
+            <input
+              type="email"
+              name="mail"
+              placeholder="Correo electrónico"
+              value={form.mail}
+              onChange={handleChange}
+              className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 w-full"
+            />
+            {errors.mail && <p className="text-red-500 text-sm mt-1">{errors.mail}</p>}
+          </div>
+
+          <div>
+            <input
+              type="password"
+              name="password"
+              placeholder="Nueva contraseña"
+              value={form.password}
+              onChange={handleChange}
+              className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 w-full"
+            />
+            {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+          </div>
+
+          <div>
+            <select
+              name="role"
+              value={form.role}
+              onChange={handleChange}
+              className="border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-purple-500 w-full"
+            >
+              <option value="USER">Usuario</option>
+              <option value="ADMIN">Administrador</option>
+            </select>
+            {errors.role && <p className="text-red-500 text-sm mt-1">{errors.role}</p>}
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-important mt-2"
           >
-            <option value="USER">Usuario</option>
-            <option value="ADMIN">Administrador</option>
-          </select>
-
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-
-          <button type="submit" disabled={loading} className="btn-important mt-2">
             {loading ? "Guardando..." : "Guardar Cambios"}
           </button>
         </form>
