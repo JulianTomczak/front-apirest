@@ -8,12 +8,24 @@
   --error: #ef4444;
   --background: #f8fafc;
   --foreground: #1e293b;
+  --card-bg: rgba(255, 255, 255, 0.95);
+  --card-border: rgba(255, 255, 255, 0.3);
+  --card-text: #1e293b;
+  --card-label: #64748b;
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --input-border: #e2e8f0;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0f172a;
     --foreground: #f1f5f9;
+    --card-bg: rgba(30, 41, 59, 0.95);
+    --card-border: rgba(255, 255, 255, 0.12);
+    --card-text: #f1f5f9;
+    --card-label: #94a3b8;
+    --input-bg: #1e293b;
+    --input-border: #334155;
   }
 }
 
@@ -38,13 +50,13 @@ body {
 
 /* Header con glassmorphism */
 .tareas-header {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--card-bg);
   backdrop-filter: blur(10px);
   border-radius: 20px;
   padding: 2rem;
   margin-bottom: 2rem;
   box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid var(--card-border);
 }
 
 .tareas-title {
@@ -58,13 +70,13 @@ body {
 
 /* Cards modernas */
 .tarea-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--card-bg);
   backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 1.5rem;
   margin-bottom: 1rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(255,255,255,0.3);
+  border: 1px solid var(--card-border);
   box-shadow: 0 8px 32px rgba(0,0,0,0.1);
   position: relative;
   overflow: hidden;
@@ -201,12 +213,12 @@ body {
 }
 
 .estadistica-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--card-bg);
   backdrop-filter: blur(10px);
   border-radius: 12px;
   padding: 1.5rem;
   text-align: center;
-  border: 1px solid rgba(255,255,255,0.3);
+  border: 1px solid var(--card-border);
 }
 
 .estadistica-valor {
@@ -246,10 +258,11 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--card-bg);
   backdrop-filter: blur(5px);
   border-radius: 12px;
   margin-top: 1rem;
+  border: 1px solid var(--card-border);
 }
 
 .pagination-text {
@@ -385,7 +398,7 @@ body {
 .tarea-label {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--card-label);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -448,10 +461,11 @@ body {
 .filtro-input {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--input-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--input-bg);
   font-size: 0.9rem;
+  color: var(--card-text);
   transition: all 0.3s ease;
 }
 
@@ -667,12 +681,12 @@ body {
 }
 
 .estadistica-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--card-bg);
   backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 1.5rem;
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--card-border);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -757,7 +771,7 @@ body {
 .estadistica-label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--card-label);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -809,5 +823,65 @@ body {
   
   .estadistica-valor {
     font-size: 1.75rem;
+  }
+}
+
+/* ===== MODO OSCURO PARA UTILIDADES TAILWIND ===== */
+@media (prefers-color-scheme: dark) {
+  /* Contenedores principales con fondo blanco fijo */
+  .bg-white {
+    background-color: var(--card-bg) !important;
+  }
+
+  /* Texto dentro de dichos contenedores */
+  .bg-white .text-gray-600,
+  .bg-white .text-gray-700,
+  .bg-white .text-gray-500,
+  .bg-white .text-slate-600,
+  .bg-white .text-slate-700,
+  .bg-white .text-neutral-600,
+  .bg-white .text-neutral-700,
+  .bg-white .text-zinc-600,
+  .bg-white .text-zinc-700 {
+    color: var(--card-label);
+  }
+
+  /* Elementos de texto directamente en los contenedores que heredan --foreground claro */
+  .text-foreground {
+    color: var(--foreground);
+  }
+
+  /* Inputs y selects de las tarjetas en modo oscuro */
+  .filtro-input option {
+    background-color: #0f172a;
+    color: #f1f5f9;
+  }
+
+  input, select, textarea {
+    color-scheme: dark;
+  }
+
+  /* Campos de formulario con fondo transparente dentro de tarjetas oscuras */
+  .bg-white input:not([type="color"]),
+  .bg-white select,
+  .bg-white textarea {
+    background-color: #1e293b;
+    color: #f1f5f9;
+    border-color: #334155;
+  }
+
+  .bg-white input::placeholder,
+  .bg-white textarea::placeholder {
+    color: #94a3b8;
+  }
+
+  .bg-white select option {
+    background-color: #1e293b;
+    color: #f1f5f9;
+  }
+
+  /* Títulos con tonos morados para que sean legibles sobre fondo oscuro */
+  .bg-white .text-purple-700 {
+    color: #c4b5fd;
   }
 }
