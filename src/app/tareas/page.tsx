@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getTareas, deleteTarea, filterTareas, patchTarea, updateTarea } from "../lib/api/tareas";
-import { Task, PaginatedTasks, TaskUpdateDTO } from "../types/task";
+import { getTareas, deleteTarea, filterTareas, patchTarea } from "../lib/api/tareas";
+import { Task, PaginatedTasks } from "../types/task";
 import ConfirmModal from "../components/ConfirmModal";
 import TaskFormModal from "../components/TaskFormModal";
 import TaskEditModal from "../components/TaskEditModal";
@@ -16,20 +16,26 @@ export default function TareasPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [filtersApplied, setFiltersApplied] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
   const [filters, setFilters] = useState({
     title: "",
     completed: "" as "" | "true" | "false",
     dueBefore: "",
-    userId: ""
+    userId: "",
   });
 
   const [token, setToken] = useState<string | null>(null);
   const [userRole, setUserRole] = useState("USER");
   const [userIdFromToken, setUserIdFromToken] = useState(0);
+
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const t = localStorage.getItem("token");
@@ -42,38 +48,35 @@ export default function TareasPage() {
       const payload = JSON.parse(atob(t.split(".")[1]));
       setUserRole(payload.role);
       setUserIdFromToken(payload.id);
-    } catch { }
+    } catch {}
   }, [router]);
 
-  const loadTareas = async (page: number = currentPage) => {
+  const fetchPage = async (page: number, size: number, useFilters: boolean) => {
     if (!token) return;
     try {
       setLoading(true);
-      const data: PaginatedTasks = await getTareas(page);
+      setError(null);
+      let data: PaginatedTasks;
+      if (useFilters) {
+        const completed = filters.completed === "" ? undefined : filters.completed === "true";
+        const userIdToSend =
+          userRole === "ADMIN" ? (filters.userId ? Number(filters.userId) : undefined) : userIdFromToken;
+        data = await filterTareas(
+          {
+            title: filters.title || undefined,
+            completed,
+            dueBefore: filters.dueBefore || undefined,
+            userId: userIdToSend,
+          },
+          page,
+          size
+        );
+      } else {
+        data = await getTareas(page, size);
+      }
       setTareas(data.content);
       setPaginatedData(data);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const applyFilters = async (page: number = 0) => {
-    if (!token) return;
-    try {
-      setLoading(true);
-      const completed = filters.completed === "" ? undefined : filters.completed === "true";
-      const userIdToSend = userRole === "ADMIN"
-        ? (filters.userId ? Number(filters.userId) : undefined)
-        : userIdFromToken;
-      const data = await filterTareas(
-        { title: filters.title || undefined, completed, dueBefore: filters.dueBefore || undefined, userId: userIdToSend },
-        page
-      );
-      setTareas(data.content);
-      setPaginatedData(data);
-      setCurrentPage(page);
+      setCurrentPage(data.number);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -82,8 +85,21 @@ export default function TareasPage() {
   };
 
   useEffect(() => {
-    if (token) loadTareas();
-  }, [token, currentPage]);
+    if (token) fetchPage(currentPage, pageSize, filtersApplied);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  const applyFilters = (page: number = 0) => {
+    setFiltersApplied(true);
+    fetchPage(page, pageSize, true);
+  };
+
+  const clearFilters = () => {
+    setFilters({ title: "", completed: "", dueBefore: "", userId: "" });
+    setFiltersApplied(false);
+    setShowMoreFilters(false);
+    fetchPage(0, pageSize, false);
+  };
 
   const handleDelete = async (id: number) => {
     if (!token) return;
@@ -91,14 +107,15 @@ export default function TareasPage() {
       await deleteTarea(id, token);
       applyFilters(currentPage);
     } catch {
-      alert("Error al eliminar tarea");
+      setError("Error al eliminar tarea");
     } finally {
       setConfirmDeleteId(null);
+      setOpenMenuId(null);
     }
   };
 
   const handleTaskUpdated = (updatedTask: Task) => {
-    setTareas(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+    setTareas(prev => prev.map(t => (t.id === updatedTask.id ? updatedTask : t)));
   };
 
   const handleMarkCompleted = async (taskId: number) => {
@@ -107,60 +124,112 @@ export default function TareasPage() {
       const updatedTask = await patchTarea(taskId, { completed: true }, token);
       handleTaskUpdated(updatedTask);
     } catch (err) {
-      alert((err as Error).message);
+      setError((err as Error).message);
+    } finally {
+      setOpenMenuId(null);
     }
   };
 
-  const handlePreviousPage = () => currentPage > 0 && applyFilters(currentPage - 1);
-  const handleNextPage = () => paginatedData && !paginatedData.last && applyFilters(currentPage + 1);
-  const handleLogout = () => { localStorage.removeItem("token"); router.replace("/login"); };
+  const handlePreviousPage = () => currentPage > 0 && fetchPage(currentPage - 1, pageSize, filtersApplied);
+  const handleNextPage = () =>
+    paginatedData && !paginatedData.last && fetchPage(currentPage + 1, pageSize, filtersApplied);
+  const goToPage = (page: number) => fetchPage(page, pageSize, filtersApplied);
 
+  const handlePageSize = (size: number) => {
+    setPageSize(size);
+    fetchPage(0, size, filtersApplied);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    router.replace("/login");
+  };
+
+  // Cerrar menú contextual al hacer clic fuera
+  useEffect(() => {
+    if (openMenuId === null) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [openMenuId]);
+
+  const hasActiveFilters = filtersApplied || Object.values(filters).some(v => v);
   const tareasCompletadas = tareas.filter(t => t.completed).length;
   const tareasPendientes = tareas.filter(t => !t.completed).length;
+  const total = paginatedData?.totalElements ?? tareas.length;
+  const totalPages = paginatedData?.totalPages ?? 0;
+  const progreso = tareas.length > 0 ? Math.round((tareasCompletadas / tareas.length) * 100) : 0;
 
-  if (!token) return <p className="text-center mt-10">Cargando...</p>;
+  // Rango de páginas para la paginación
+  const getPageNumbers = () => {
+    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i);
+    const pages: (number | "…")[] = [0];
+    const start = Math.max(1, currentPage - 1);
+    const end = Math.min(totalPages - 2, currentPage + 1);
+    if (start > 1) pages.push("…");
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages - 2) pages.push("…");
+    pages.push(totalPages - 1);
+    return pages;
+  };
+
+  if (!token) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-400 to-indigo-500 p-4">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-5xl p-8">
-        {/* Botones superior */}
-        <div className="flex justify-between mb-6">
-          <div className="flex gap-2">
-            <button onClick={() => router.push("/")} className="btn-secondary">← Volver</button>
-            <button onClick={() => setShowTaskModal(true)} className="btn-modern">➕ Nueva Tarea</button>
+    <div className="min-h-screen flex items-start justify-center bg-gradient-to-r from-purple-400 to-indigo-500 p-4 sm:p-6">
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-5xl p-5 sm:p-7">
+        {/* Header compacto */}
+        <header className="page-header">
+          <div className="page-header-left">
+            <button onClick={() => router.push("/")} className="btn-ghost" aria-label="Volver al inicio">
+              ← Volver
+            </button>
+            <div>
+              <h1 className="page-heading-title">📝 Gestor de Tareas</h1>
+              <p className="page-heading-subtitle">Organiza y gestiona tus actividades</p>
+            </div>
           </div>
-          <button onClick={handleLogout} className="btn-important">Desconectarse</button>
-        </div>
+          <div className="page-header-actions">
+            <button className="btn-link-logout" onClick={handleLogout} aria-label="Desconectarse">
+              Desconectarse
+            </button>
+            <button onClick={() => setShowTaskModal(true)} className="btn-apply" aria-label="Crear nueva tarea">
+              ＋ Nueva tarea
+            </button>
+          </div>
+        </header>
 
-        {/* Header */}
-        <div className="tareas-header mb-6 text-center">
-          <div className="icono-decorativo icono-tarea mx-auto">📝</div>
-          <h1 className="tareas-title">Gestor de Tareas</h1>
-          <p className="text-foreground">Organiza y gestiona todas tus actividades</p>
-        </div>
-
-        {/* Filtros */}
+        {/* Filtros compactos */}
         <form
-          onSubmit={e => { e.preventDefault(); applyFilters(); }}
-          className="filtros-container"
+          className="filter-bar"
+          onSubmit={e => {
+            e.preventDefault();
+            applyFilters();
+          }}
         >
-          <div className="filtro-group">
-            <label className="filtro-label">Título</label>
+          <div className="filter-field filter-field--search">
+            <label className="filter-label" htmlFor="f-titulo">Buscar</label>
             <input
+              id="f-titulo"
               type="text"
               value={filters.title}
               onChange={e => setFilters({ ...filters, title: e.target.value })}
-              className="filtro-input"
+              className="filter-input"
               placeholder="Buscar por título..."
             />
           </div>
 
-          <div className="filtro-group">
-            <label className="filtro-label">Estado</label>
+          <div className="filter-field">
+            <label className="filter-label" htmlFor="f-estado">Estado</label>
             <select
+              id="f-estado"
               value={filters.completed}
               onChange={e => setFilters({ ...filters, completed: e.target.value as "" | "true" | "false" })}
-              className="filtro-input"
+              className="filter-input"
             >
               <option value="">Todos</option>
               <option value="true">Completadas</option>
@@ -168,201 +237,221 @@ export default function TareasPage() {
             </select>
           </div>
 
-          <div className="filtro-group">
-            <label className="filtro-label">Fecha límite antes de</label>
+          <div className="filter-field">
+            <label className="filter-label" htmlFor="f-fecha">Vence antes de</label>
             <input
+              id="f-fecha"
               type="date"
               value={filters.dueBefore}
               onChange={e => setFilters({ ...filters, dueBefore: e.target.value })}
-              className="filtro-input"
+              className="filter-input"
             />
           </div>
 
-          {userRole === "ADMIN" && (
-            <div className="filtro-group">
-              <label className="filtro-label">ID Usuario</label>
-              <input
-                type="number"
-                value={filters.userId}
-                onChange={e => setFilters({ ...filters, userId: e.target.value })}
-                className="filtro-input"
-                placeholder="Filtrar por usuario..."
-              />
-            </div>
-          )}
-
-          <div className="filtro-group flex flex-col justify-end">
-            <button type="submit" className="btn-modern w-full">
-              🔍 Filtrar
+          <div className="filter-bar-actions">
+            <button type="submit" className="btn-apply" disabled={loading}>
+              {loading ? "Cargando…" : "Aplicar"}
+            </button>
+            <button
+              type="button"
+              className="btn-more-filters"
+              onClick={() => setShowMoreFilters(v => !v)}
+              aria-expanded={showMoreFilters}
+            >
+              Más filtros {showMoreFilters ? "▴" : "▾"}
+            </button>
+            <button type="button" className="btn-clear" onClick={clearFilters} aria-label="Limpiar filtros">
+              Limpiar
             </button>
           </div>
-        </form>
 
-        {/* Estadísticas */}
-        <div className="estadisticas-container">
-          <div className="estadistica-card fade-slide-up" style={{ animationDelay: "0.1s" }}>
-            <div className="estadistica-icono">📊</div>
-            <div className="estadistica-valor">{tareas.length}</div>
-            <div className="estadistica-label">Total Tareas</div>
-            {tareas.length > 0 && (
-              <div className="estadistica-tendencia">
-                <span>📈</span>
-                <span>{((tareasCompletadas / tareas.length) * 100).toFixed(0)}% completado</span>
-              </div>
-            )}
-          </div>
-
-          <div className="estadistica-card estadistica-completadas fade-slide-up" style={{ animationDelay: "0.2s" }}>
-            <div className="estadistica-icono">✅</div>
-            <div className="estadistica-valor">{tareasCompletadas}</div>
-            <div className="estadistica-label">Completadas</div>
-            {tareas.length > 0 && (
-              <div className="estadistica-tendencia">
-                <span>🎯</span>
-                <span>{Math.round((tareasCompletadas / tareas.length) * 100)}% del total</span>
-              </div>
-            )}
-          </div>
-
-          <div className="estadistica-card estadistica-pendientes fade-slide-up" style={{ animationDelay: "0.3s" }}>
-            <div className="estadistica-icono">⏳</div>
-            <div className="estadistica-valor">{tareasPendientes}</div>
-            <div className="estadistica-label">Pendientes</div>
-            {tareasPendientes > 0 && (
-              <div className="estadistica-tendencia" style={{ background: 'rgba(245, 158, 11, 0.1)', color: 'var(--warning)' }}>
-                <span>⚠️</span>
-                <span>Por completar</span>
-              </div>
-            )}
-          </div>
-
-          <div className="estadistica-card estadistica-paginas fade-slide-up" style={{ animationDelay: "0.4s" }}>
-            <div className="estadistica-icono">📑</div>
-            <div className="estadistica-valor">{paginatedData?.totalPages ?? 0}</div>
-            <div className="estadistica-label">Total Páginas</div>
-            {paginatedData && (
-              <div className="estadistica-tendencia" style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' }}>
-                <span>📍</span>
-                <span>Pág. {currentPage + 1} de {paginatedData.totalPages}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Tareas */}
-        <div className="tareas-grid mb-6">
-          {tareas.length > 0 ? tareas.map((t, i) => (
-            <div key={t.id} className={`tarea-card ${t.completed ? "completada" : "pendiente"}`}>
-              {/* Header con estado en esquina */}
-              <div className="tarea-card-header">
-                <div className="tarea-field">
-                  <span className="tarea-label">Título</span>
-                  <span className="tarea-value title">{t.title}</span>
-                </div>
-                <div className="tarea-estado-corner">
-                  <span className={`estado-badge ${t.completed ? "estado-completada" : "estado-pendiente"}`}>
-                    {t.completed ? "✅ Completada" : "⏳ Pendiente"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Contenido de la tarjeta */}
-              <div className="tarea-card-content">
-                <div className="tarea-field">
-                  <span className="tarea-label">Descripción</span>
-                  <span className="tarea-value description">{t.description}</span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="tarea-field">
-                    <span className="tarea-label">Vence</span>
-                    <span className="tarea-value">
-                      📅 {new Date(t.dueDate).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  <div className="tarea-field">
-                    <span className="tarea-label">Usuario</span>
-                    <span className="tarea-value">
-                      👤 {t.user.name}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="tarea-field">
-                  <span className="tarea-label">Creada</span>
-                  <span className="tarea-value">
-                    🗓️ {new Date(t.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Acciones */}
-              <div className="tarea-actions">
-                <button
-                  className="btn-action btn-editar"
-                  onClick={() => setEditingTask(t)}
-                >
-                  ✏️ Editar
-                </button>
-                {!t.completed && (
-                  <button
-                    className="btn-action btn-completar"
-                    onClick={() => handleMarkCompleted(t.id)}
-                  >
-                    ✅ Completar
-                  </button>
-                )}
-                <button
-                  className="btn-action btn-eliminar"
-                  onClick={() => setConfirmDeleteId(t.id)}
-                >
-                  🗑️ Eliminar
-                </button>
+          {showMoreFilters && userRole === "ADMIN" && (
+            <div className="more-filters-panel">
+              <div className="filter-field">
+                <label className="filter-label" htmlFor="f-usuario">ID Usuario</label>
+                <input
+                  id="f-usuario"
+                  type="number"
+                  value={filters.userId}
+                  onChange={e => setFilters({ ...filters, userId: e.target.value })}
+                  className="filter-input"
+                  placeholder="Filtrar por usuario..."
+                />
               </div>
             </div>
-          )) : (
-            !loading && (
-              <div className="col-span-full text-center py-12">
-                <div className="text-4xl mb-4">📭</div>
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                  No hay tareas
-                </h3>
-                <p className="text-gray-500">
-                  {Object.values(filters).some(v => v)
-                    ? "Intenta con otros filtros"
-                    : "Crea tu primera tarea"
-                  }
-                </p>
-              </div>
-            )
           )}
+        </form>
+
+        {/* KPIs compactos */}
+        <div className="kpi-row">
+          <div className="kpi-card">
+            <span className="kpi-value kpi-value--primary">{total}</span>
+            <span className="kpi-label">Total tareas</span>
+            <span className="kpi-hint">en total</span>
+          </div>
+          <div className="kpi-card">
+            <span className="kpi-value kpi-value--warning">{tareasPendientes}</span>
+            <span className="kpi-label">Pendientes</span>
+            <span className="kpi-hint">esta página</span>
+          </div>
+          <div className="kpi-card">
+            <span className="kpi-value kpi-value--success">{tareasCompletadas}</span>
+            <span className="kpi-label">Completadas</span>
+            <span className="kpi-hint">esta página</span>
+          </div>
+          <div className="kpi-card">
+            <span className="kpi-value kpi-value--muted">{progreso}%</span>
+            <span className="kpi-label">Progreso</span>
+            <span className="kpi-hint">de esta página</span>
+          </div>
         </div>
 
+        {/* Lista de tareas */}
+        <div className="section-heading">
+          <h2 className="section-title">
+            Tareas <span className="section-count">({tareas.length})</span>
+          </h2>
+        </div>
+
+        {error && (
+          <div className="error-banner" role="alert">
+            ⚠️ {error}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="skeleton-list">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="skeleton" style={{ height: "72px", borderRadius: "12px" }} />
+            ))}
+          </div>
+        ) : tareas.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">📭</div>
+            <p className="empty-state-title">{hasActiveFilters ? "Sin resultados" : "No hay tareas"}</p>
+            <p className="empty-state-text">
+              {hasActiveFilters
+                ? "No encontramos tareas que coincidan con los filtros actuales."
+                : "Crea tu primera tarea para empezar a organizar tu trabajo."}
+            </p>
+            {hasActiveFilters && (
+              <button className="btn-clear" onClick={clearFilters}>
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="tasks-list">
+            {tareas.map(t => (
+              <article
+                key={t.id}
+                className={`task-item ${t.completed ? "task-item--completed" : "task-item--pending"}`}
+              >
+                <span
+                  className={`task-status-dot ${t.completed ? "task-status-dot--completed" : "task-status-dot--pending"}`}
+                  aria-label={t.completed ? "Tarea completada" : "Tarea pendiente"}
+                >
+                  {t.completed ? "✓" : ""}
+                </span>
+
+                <div className="task-item-body">
+                  <p className="task-item-title">{t.title}</p>
+                  {t.description && <p className="task-item-description">{t.description}</p>}
+                  <div className="task-item-meta">
+                    <span>📅 {new Date(t.dueDate).toLocaleDateString()}</span>
+                    <span>👤 {t.user.name}</span>
+                    <span className={`estado-badge ${t.completed ? "estado-completada" : "estado-pendiente"}`}>
+                      {t.completed ? "Completada" : "Pendiente"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="task-item-actions">
+                  <button
+                    className="task-menu-btn"
+                    onClick={() => setOpenMenuId(openMenuId === t.id ? null : t.id)}
+                    aria-label="Acciones de la tarea"
+                    aria-expanded={openMenuId === t.id}
+                    aria-haspopup="menu"
+                  >
+                    ⋮
+                  </button>
+                  {openMenuId === t.id && (
+                    <div className="task-menu" role="menu" ref={menuRef}>
+                      <button className="menu-item" role="menuitem" onClick={() => { setEditingTask(t); setOpenMenuId(null); }}>
+                        ✏️ Editar
+                      </button>
+                      {!t.completed && (
+                        <button className="menu-item" role="menuitem" onClick={() => handleMarkCompleted(t.id)}>
+                          ✅ Completar
+                        </button>
+                      )}
+                      <button
+                        className="menu-item menu-item--danger"
+                        role="menuitem"
+                        onClick={() => setConfirmDeleteId(t.id)}
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
         {/* Paginación */}
-        {paginatedData && paginatedData.totalPages > 1 && (
-          <div className="pagination-controls">
-            <button onClick={handlePreviousPage} disabled={currentPage === 0} className="btn-modern">Anterior</button>
-            <span className="pagination-text">Página {currentPage + 1} de {paginatedData.totalPages}</span>
-            <button onClick={handleNextPage} disabled={paginatedData.last} className="btn-modern">Siguiente</button>
+        {!loading && tareas.length > 0 && (
+          <div className="pagination">
+            <div className="pagination-pages">
+              <button className="page-btn" onClick={handlePreviousPage} disabled={currentPage === 0} aria-label="Página anterior">
+                ←
+              </button>
+              {getPageNumbers().map((p, i) =>
+                p === "…" ? (
+                  <span key={`e-${i}`} className="page-ellipsis">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    className={`page-btn ${p === currentPage ? "page-btn--active" : ""}`}
+                    onClick={() => goToPage(p)}
+                    aria-current={p === currentPage ? "page" : undefined}
+                  >
+                    {p + 1}
+                  </button>
+                )
+              )}
+              <button className="page-btn" onClick={handleNextPage} disabled={!paginatedData || paginatedData.last} aria-label="Página siguiente">
+                →
+              </button>
+            </div>
+
+            <div className="page-size">
+              <label htmlFor="page-size">Tareas por página</label>
+              <select id="page-size" value={pageSize} onChange={e => handlePageSize(Number(e.target.value))}>
+                {[5, 10, 15, 20].map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Modal para crear tarea */}
-      {showTaskModal && <TaskFormModal onClose={() => setShowTaskModal(false)} onSuccess={() => applyFilters(currentPage)} />}
-
-      {/* Modal de edición */}
+      {showTaskModal && (
+        <TaskFormModal onClose={() => setShowTaskModal(false)} onSuccess={() => applyFilters(currentPage)} />
+      )}
       {editingTask && (
-        <TaskEditModal
-          task={editingTask}
-          onClose={() => setEditingTask(null)}
-          onSuccess={handleTaskUpdated} // actualiza la tarea localmente
+        <TaskEditModal task={editingTask} onClose={() => setEditingTask(null)} onSuccess={handleTaskUpdated} />
+      )}
+      {confirmDeleteId !== null && (
+        <ConfirmModal
+          message="¿Deseas eliminar esta tarea?"
+          onConfirm={() => handleDelete(confirmDeleteId)}
+          onCancel={() => setConfirmDeleteId(null)}
         />
       )}
-
-      {/* Modal de confirmación para eliminar */}
-      {confirmDeleteId !== null && <ConfirmModal message="¿Deseas eliminar esta tarea?" onConfirm={() => handleDelete(confirmDeleteId)} onCancel={() => setConfirmDeleteId(null)} />}
     </div>
   );
 }
