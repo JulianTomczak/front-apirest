@@ -53,9 +53,9 @@ export default function UserEditModal({ user, onClose, onSuccess }: UserEditModa
       await updateUsuario(user.id, form);
       onSuccess();
       onClose();
-    } catch (err: any) {
-      if (err && typeof err === "object") {
-        setErrors(err); // mostrar errores por campo
+    } catch (err: unknown) {
+      if (err !== null && typeof err === "object") {
+        setErrors(err as Partial<Record<keyof UserRequestDTO, string>>); // mostrar errores por campo
       } else {
         setErrors({ name: "Error desconocido" });
       }

@@ -7,6 +7,13 @@ import { Task, PaginatedTasks } from "../types/task";
 import ConfirmModal from "../components/ConfirmModal";
 import TaskFormModal from "../components/TaskFormModal";
 import TaskEditModal from "../components/TaskEditModal";
+import PageHeader from "../components/PageHeader";
+import AppTopBar from "../components/AppTopBar";
+import KpiRow from "../components/KpiRow";
+import Pagination from "../components/Pagination";
+import EmptyState from "../components/EmptyState";
+import LoadingSkeleton from "../components/LoadingSkeleton";
+import ErrorBanner from "../components/ErrorBanner";
 
 export default function TareasPage() {
   const router = useRouter();
@@ -130,11 +137,7 @@ export default function TareasPage() {
     }
   };
 
-  const handlePreviousPage = () => currentPage > 0 && fetchPage(currentPage - 1, pageSize, filtersApplied);
-  const handleNextPage = () =>
-    paginatedData && !paginatedData.last && fetchPage(currentPage + 1, pageSize, filtersApplied);
   const goToPage = (page: number) => fetchPage(page, pageSize, filtersApplied);
-
   const handlePageSize = (size: number) => {
     setPageSize(size);
     fetchPage(0, size, filtersApplied);
@@ -164,44 +167,23 @@ export default function TareasPage() {
   const totalPages = paginatedData?.totalPages ?? 0;
   const progreso = tareas.length > 0 ? Math.round((tareasCompletadas / tareas.length) * 100) : 0;
 
-  // Rango de páginas para la paginación
-  const getPageNumbers = () => {
-    if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i);
-    const pages: (number | "…")[] = [0];
-    const start = Math.max(1, currentPage - 1);
-    const end = Math.min(totalPages - 2, currentPage + 1);
-    if (start > 1) pages.push("…");
-    for (let i = start; i <= end; i++) pages.push(i);
-    if (end < totalPages - 2) pages.push("…");
-    pages.push(totalPages - 1);
-    return pages;
-  };
-
   if (!token) return null;
 
   return (
     <div className="min-h-screen flex items-start justify-center bg-gradient-to-r from-purple-400 to-indigo-500 p-4 sm:p-6">
       <div className="bg-white rounded-xl shadow-lg w-full max-w-5xl p-5 sm:p-7">
-        {/* Header compacto */}
-        <header className="page-header">
-          <div className="page-header-left">
-            <button onClick={() => router.push("/")} className="btn-ghost" aria-label="Volver al inicio">
-              ← Volver
-            </button>
-            <div>
-              <h1 className="page-heading-title">📝 Gestor de Tareas</h1>
-              <p className="page-heading-subtitle">Organiza y gestiona tus actividades</p>
-            </div>
-          </div>
-          <div className="page-header-actions">
-            <button className="btn-link-logout" onClick={handleLogout} aria-label="Desconectarse">
-              Desconectarse
-            </button>
+        <AppTopBar onBack={() => router.push("/")} onLogout={handleLogout} />
+
+        <PageHeader
+          title="Gestor de Tareas"
+          subtitle="Organiza y gestiona tus actividades"
+          icon="📝"
+          primaryAction={
             <button onClick={() => setShowTaskModal(true)} className="btn-apply" aria-label="Crear nueva tarea">
               ＋ Nueva tarea
             </button>
-          </div>
-        </header>
+          }
+        />
 
         {/* Filtros compactos */}
         <form
@@ -212,7 +194,9 @@ export default function TareasPage() {
           }}
         >
           <div className="filter-field filter-field--search">
-            <label className="filter-label" htmlFor="f-titulo">Buscar</label>
+            <label className="filter-label" htmlFor="f-titulo">
+              Buscar
+            </label>
             <input
               id="f-titulo"
               type="text"
@@ -224,7 +208,9 @@ export default function TareasPage() {
           </div>
 
           <div className="filter-field">
-            <label className="filter-label" htmlFor="f-estado">Estado</label>
+            <label className="filter-label" htmlFor="f-estado">
+              Estado
+            </label>
             <select
               id="f-estado"
               value={filters.completed}
@@ -238,7 +224,9 @@ export default function TareasPage() {
           </div>
 
           <div className="filter-field">
-            <label className="filter-label" htmlFor="f-fecha">Vence antes de</label>
+            <label className="filter-label" htmlFor="f-fecha">
+              Vence antes de
+            </label>
             <input
               id="f-fecha"
               type="date"
@@ -268,7 +256,9 @@ export default function TareasPage() {
           {showMoreFilters && userRole === "ADMIN" && (
             <div className="more-filters-panel">
               <div className="filter-field">
-                <label className="filter-label" htmlFor="f-usuario">ID Usuario</label>
+                <label className="filter-label" htmlFor="f-usuario">
+                  ID Usuario
+                </label>
                 <input
                   id="f-usuario"
                   type="number"
@@ -283,28 +273,14 @@ export default function TareasPage() {
         </form>
 
         {/* KPIs compactos */}
-        <div className="kpi-row">
-          <div className="kpi-card">
-            <span className="kpi-value kpi-value--primary">{total}</span>
-            <span className="kpi-label">Total tareas</span>
-            <span className="kpi-hint">en total</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-value kpi-value--warning">{tareasPendientes}</span>
-            <span className="kpi-label">Pendientes</span>
-            <span className="kpi-hint">esta página</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-value kpi-value--success">{tareasCompletadas}</span>
-            <span className="kpi-label">Completadas</span>
-            <span className="kpi-hint">esta página</span>
-          </div>
-          <div className="kpi-card">
-            <span className="kpi-value kpi-value--muted">{progreso}%</span>
-            <span className="kpi-label">Progreso</span>
-            <span className="kpi-hint">de esta página</span>
-          </div>
-        </div>
+        <KpiRow
+          items={[
+            { value: total, label: "Total tareas", hint: "en total", tone: "primary" },
+            { value: tareasPendientes, label: "Pendientes", hint: "esta página", tone: "warning" },
+            { value: tareasCompletadas, label: "Completadas", hint: "esta página", tone: "success" },
+            { value: `${progreso}%`, label: "Progreso", hint: "de esta página" },
+          ]}
+        />
 
         {/* Lista de tareas */}
         <div className="section-heading">
@@ -313,33 +289,26 @@ export default function TareasPage() {
           </h2>
         </div>
 
-        {error && (
-          <div className="error-banner" role="alert">
-            ⚠️ {error}
-          </div>
-        )}
+        {error && <ErrorBanner message={error} />}
 
         {loading ? (
-          <div className="skeleton-list">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="skeleton" style={{ height: "72px", borderRadius: "12px" }} />
-            ))}
-          </div>
+          <LoadingSkeleton rows={5} />
         ) : tareas.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state-icon">📭</div>
-            <p className="empty-state-title">{hasActiveFilters ? "Sin resultados" : "No hay tareas"}</p>
-            <p className="empty-state-text">
-              {hasActiveFilters
+          <EmptyState
+            title={hasActiveFilters ? "Sin resultados" : "No hay tareas"}
+            text={
+              hasActiveFilters
                 ? "No encontramos tareas que coincidan con los filtros actuales."
-                : "Crea tu primera tarea para empezar a organizar tu trabajo."}
-            </p>
-            {hasActiveFilters && (
-              <button className="btn-clear" onClick={clearFilters}>
-                Limpiar filtros
-              </button>
-            )}
-          </div>
+                : "Crea tu primera tarea para empezar a organizar tu trabajo."
+            }
+            action={
+              hasActiveFilters ? (
+                <button className="btn-clear" onClick={clearFilters}>
+                  Limpiar filtros
+                </button>
+              ) : undefined
+            }
+          />
         ) : (
           <div className="tasks-list">
             {tareas.map(t => (
@@ -378,7 +347,14 @@ export default function TareasPage() {
                   </button>
                   {openMenuId === t.id && (
                     <div className="task-menu" role="menu" ref={menuRef}>
-                      <button className="menu-item" role="menuitem" onClick={() => { setEditingTask(t); setOpenMenuId(null); }}>
+                      <button
+                        className="menu-item"
+                        role="menuitem"
+                        onClick={() => {
+                          setEditingTask(t);
+                          setOpenMenuId(null);
+                        }}
+                      >
                         ✏️ Editar
                       </button>
                       {!t.completed && (
@@ -403,39 +379,15 @@ export default function TareasPage() {
 
         {/* Paginación */}
         {!loading && tareas.length > 0 && (
-          <div className="pagination">
-            <div className="pagination-pages">
-              <button className="page-btn" onClick={handlePreviousPage} disabled={currentPage === 0} aria-label="Página anterior">
-                ←
-              </button>
-              {getPageNumbers().map((p, i) =>
-                p === "…" ? (
-                  <span key={`e-${i}`} className="page-ellipsis">…</span>
-                ) : (
-                  <button
-                    key={p}
-                    className={`page-btn ${p === currentPage ? "page-btn--active" : ""}`}
-                    onClick={() => goToPage(p)}
-                    aria-current={p === currentPage ? "page" : undefined}
-                  >
-                    {p + 1}
-                  </button>
-                )
-              )}
-              <button className="page-btn" onClick={handleNextPage} disabled={!paginatedData || paginatedData.last} aria-label="Página siguiente">
-                →
-              </button>
-            </div>
-
-            <div className="page-size">
-              <label htmlFor="page-size">Tareas por página</label>
-              <select id="page-size" value={pageSize} onChange={e => handlePageSize(Number(e.target.value))}>
-                {[5, 10, 15, 20].map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <Pagination
+            page={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            pageSize={pageSize}
+            onPageSizeChange={handlePageSize}
+            showPageSize
+            pageSizeLabel="Tareas por página"
+          />
         )}
       </div>
 
