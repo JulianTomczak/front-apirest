@@ -43,10 +43,10 @@ export default function UserFormModal({ onClose, onSuccess }: UserFormModalProps
       await createUsuario(form);
       onSuccess();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Si el backend devolvió errores por campo
-      if (err && typeof err === "object") {
-        setErrors(err);
+      if (err !== null && typeof err === "object") {
+        setErrors(err as Partial<Record<keyof UserRequestDTO, string>>);
       } else {
         // Mensaje general si algo inesperado ocurrió
         setErrors({ name: "Error desconocido" });

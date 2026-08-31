@@ -42,10 +42,10 @@ export default function TaskEditModal({ task, onClose, onSuccess }: TaskEditModa
       const updatedTask = await updateTarea(task.id, form, token);
       onSuccess(updatedTask);
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Si el backend devuelve errores por campo
-      if (err && typeof err === "object") {
-        setErrors(err);
+      if (err !== null && typeof err === "object") {
+        setErrors(err as Partial<Record<keyof TaskUpdateDTO, string>>);
       } else {
         setErrors({ title: "Error desconocido" });
       }

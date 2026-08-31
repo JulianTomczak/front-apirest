@@ -63,10 +63,10 @@ export default function TaskFormModal({ onClose, onSuccess }: TaskFormModalProps
       await createTarea({ ...form }, userId);
       onSuccess();
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Si el backend devuelve errores por campo
-      if (err && typeof err === "object") {
-        setErrors(err);
+      if (err !== null && typeof err === "object") {
+        setErrors(err as Partial<Record<keyof typeof form, string>>);
       } else {
         setErrors({ title: "Error desconocido" });
       }

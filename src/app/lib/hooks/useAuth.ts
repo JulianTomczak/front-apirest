@@ -7,7 +7,6 @@ import { jwtDecode } from "jwt-decode";
 interface DecodedToken {
   exp: number;
   role?: string;
-  [key: string]: any;
 }
 
 export function useAuth() {

@@ -7,6 +7,12 @@ import { UserResponseDTO, PaginatedUsers } from "../types/user";
 import UserFormModal from "../components/UserFormModal";
 import UserEditModal from "../components/UserEditModal";
 import ConfirmModal from "../components/ConfirmModal";
+import PageHeader from "../components/PageHeader";
+import AppTopBar from "../components/AppTopBar";
+import Pagination from "../components/Pagination";
+import EmptyState from "../components/EmptyState";
+import LoadingSkeleton from "../components/LoadingSkeleton";
+import ErrorBanner from "../components/ErrorBanner";
 
 export default function UsuariosPage() {
   const router = useRouter();
@@ -16,12 +22,13 @@ export default function UsuariosPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [showUserModal, setShowUserModal] = useState(false);
   const [editUser, setEditUser] = useState<UserResponseDTO | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
-  //  Cargar token solo en cliente
+  // Cargar token solo en cliente
   useEffect(() => {
     const t = localStorage.getItem("token");
     if (!t) {
@@ -32,17 +39,19 @@ export default function UsuariosPage() {
   }, [router]);
 
   // Cargar usuarios
-  const loadUsuarios = async () => {
+  const fetchPage = async (page: number, size: number) => {
     if (!token) return;
     try {
       setLoading(true);
-      const data: PaginatedUsers = await getUsuarios(currentPage, 10, token);
+      setError(null);
+      const data: PaginatedUsers = await getUsuarios(page, size, token);
       const usuariosConRole: UserResponseDTO[] = data.content.map(u => ({
         ...u,
         role: u.role ?? "USER",
       }));
       setUsuarios(usuariosConRole);
       setPaginatedData(data);
+      setCurrentPage(data.number);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -51,12 +60,15 @@ export default function UsuariosPage() {
   };
 
   useEffect(() => {
-    if (token) loadUsuarios();
-  }, [currentPage, token]);
+    if (token) fetchPage(0, pageSize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
-  const handlePreviousPage = () => currentPage > 0 && setCurrentPage(currentPage - 1);
-  const handleNextPage = () =>
-    paginatedData && !paginatedData.last && setCurrentPage(currentPage + 1);
+  const goToPage = (page: number) => fetchPage(page, pageSize);
+  const handlePageSize = (size: number) => {
+    setPageSize(size);
+    fetchPage(0, size);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -67,157 +79,107 @@ export default function UsuariosPage() {
     if (!token) return;
     try {
       await deleteUsuario(id, token);
-      loadUsuarios();
+      fetchPage(currentPage, pageSize);
     } catch {
-      alert("Error al eliminar usuario");
+      setError("Error al eliminar usuario");
     } finally {
       setConfirmDeleteId(null);
     }
   };
 
+  if (!token) return null;
+
+  const totalPages = paginatedData?.totalPages ?? 0;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-400 to-indigo-500 p-4">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-5xl p-8">
-        {/* Botones superior */}
-        <div className="flex justify-between mb-6 flex-col sm:flex-row gap-4 sm:gap-0">
-          <div className="flex gap-2 justify-center sm:justify-start">
-            <button onClick={() => router.push("/")} className="btn-secondary">
-              ← Volver
+    <div className="min-h-screen flex items-start justify-center bg-gradient-to-r from-purple-400 to-indigo-500 p-4 sm:p-6">
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-5xl p-5 sm:p-7">
+        <AppTopBar onBack={() => router.push("/")} onLogout={handleLogout} />
+
+        <PageHeader
+          title="Gestor de Usuarios"
+          subtitle="Administra todos los usuarios registrados"
+          icon="👥"
+          primaryAction={
+            <button onClick={() => setShowUserModal(true)} className="btn-apply" aria-label="Crear nuevo usuario">
+              ＋ Nuevo usuario
             </button>
-            <button onClick={() => setShowUserModal(true)} className="btn-modern">
-              ➕ Nuevo Usuario
-            </button>
-          </div>
-          <button onClick={handleLogout} className="btn-important">
-            Desconectarse
-          </button>
+          }
+        />
+
+        <div className="section-heading">
+          <h2 className="section-title">
+            Usuarios <span className="section-count">({usuarios.length})</span>
+          </h2>
         </div>
 
-        {/* Header */}
-        <div className="tareas-header mb-6 text-center">
-          <div className="icono-decorativo icono-tarea mx-auto">👥</div>
-          <h1 className="tareas-title">Gestor de Usuarios</h1>
-          <p className="text-foreground">Administra todos los usuarios registrados</p>
-        </div>
+        {error && <ErrorBanner message={error} />}
 
-        {/* Usuarios */}
-        <div className="tareas-grid mb-6">
-          {usuarios.length > 0 ? (
-            usuarios.map((u, i) => (
-              <div
-                key={u.id}
-                className="tarea-card pendiente fade-slide-up"
-                style={{ animationDelay: `${0.1 + i * 0.1}s` }}
-              >
-                <div className="tarea-card-header">
-                  <div className="tarea-field">
-                    <span className="tarea-label">Usuario ID</span>
-                    <span className="tarea-value title">#{u.id}</span>
-                  </div>
+        {loading ? (
+          <LoadingSkeleton rows={4} height={140} />
+        ) : usuarios.length === 0 ? (
+          <EmptyState
+            icon="👥"
+            title="No hay usuarios registrados"
+            text="Comienza agregando el primer usuario al sistema."
+            action={
+              <button onClick={() => setShowUserModal(true)} className="btn-apply">
+                ＋ Crear primer usuario
+              </button>
+            }
+          />
+        ) : (
+          <div className="cards-grid mb-6">
+            {usuarios.map(u => (
+              <div key={u.id} className="data-card">
+                <div className="data-card-header">
+                  <span className="data-id">#{u.id}</span>
+                  <span className={`role-badge ${u.role === "ADMIN" ? "role-badge--admin" : "role-badge--user"}`}>
+                    {u.role === "ADMIN" ? "Administrador" : "Usuario"}
+                  </span>
                 </div>
 
-                <div className="tarea-card-content">
-                  <div className="tarea-field">
-                    <span className="tarea-label">Nombre</span>
-                    <span className="tarea-value description">{u.name}</span>
-                  </div>
-                  <div className="tarea-field">
-                    <span className="tarea-label">Email</span>
-                    <span className="tarea-value">📧 {u.mail}</span>
-                  </div>
-                  <div className="tarea-field">
-                    <span className="tarea-label">Rol</span>
-                    <span className="tarea-value">{u.role === "ADMIN" ? "Administrador" : "Usuario"}</span>
-                  </div>
+                <div className="data-field">
+                  <span className="data-label">Nombre</span>
+                  <span className="data-value data-value--title">{u.name}</span>
                 </div>
 
-                <div className="tarea-actions flex gap-2">
-                  <button
-                    className="btn-action btn-editar"
-                    onClick={() => setEditUser(u)}
-                  >
+                <div className="data-field">
+                  <span className="data-label">Email</span>
+                  <span className="data-value">📧 {u.mail}</span>
+                </div>
+
+                <div className="data-card-actions">
+                  <button className="btn-action btn-editar" onClick={() => setEditUser(u)}>
                     ✏️ Editar
                   </button>
-                  <button
-                    className="btn-action btn-eliminar"
-                    onClick={() => setConfirmDeleteId(u.id)}
-                  >
+                  <button className="btn-action btn-eliminar" onClick={() => setConfirmDeleteId(u.id)}>
                     🗑️ Eliminar
                   </button>
                 </div>
               </div>
-            ))
-          ) : (
-            !loading && (
-              <div className="col-span-full text-center py-12">
-                <div className="text-4xl mb-4">👥</div>
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                  No hay usuarios registrados
-                </h3>
-                <p className="text-gray-500 mb-4">
-                  Comienza agregando el primer usuario al sistema
-                </p>
-                <button
-                  onClick={() => setShowUserModal(true)}
-                  className="btn-modern"
-                >
-                  ➕ Crear Primer Usuario
-                </button>
-              </div>
-            )
-          )}
-        </div>
-
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center py-12">
-            <div className="loading-pulse mx-auto mb-4"></div>
-            <p className="text-gray-600">Cargando usuarios...</p>
+            ))}
           </div>
         )}
 
         {/* Paginación */}
-        {paginatedData && paginatedData.totalPages > 1 && (
-          <div className="pagination-controls">
-            <button
-              onClick={handlePreviousPage}
-              disabled={currentPage === 0}
-              className="btn-modern"
-            >
-              ← Anterior
-            </button>
-            <span className="pagination-text">
-              Página {currentPage + 1} de {paginatedData.totalPages}
-            </span>
-            <button
-              onClick={handleNextPage}
-              disabled={paginatedData.last}
-              className="btn-modern"
-            >
-              Siguiente →
-            </button>
-          </div>
+        {!loading && usuarios.length > 0 && (
+          <Pagination
+            page={currentPage}
+            totalPages={totalPages}
+            onPageChange={goToPage}
+            pageSize={pageSize}
+            onPageSizeChange={handlePageSize}
+            showPageSize
+            pageSizeLabel="Usuarios por página"
+          />
         )}
       </div>
 
-      {/* Modal para crear usuario */}
-      {showUserModal && (
-        <UserFormModal
-          onSuccess={loadUsuarios}
-          onClose={() => setShowUserModal(false)}
-        />
-      )}
-
-      {/* Modal para editar usuario */}
+      {showUserModal && <UserFormModal onSuccess={() => fetchPage(currentPage, pageSize)} onClose={() => setShowUserModal(false)} />}
       {editUser && (
-        <UserEditModal
-          user={editUser}
-          onSuccess={loadUsuarios}
-          onClose={() => setEditUser(null)}
-        />
+        <UserEditModal user={editUser} onSuccess={() => fetchPage(currentPage, pageSize)} onClose={() => setEditUser(null)} />
       )}
-
-      {/* Modal de confirmación para eliminar */}
       {confirmDeleteId !== null && (
         <ConfirmModal
           message="¿Deseas eliminar este usuario?"
