@@ -12,11 +12,14 @@ import AppTopBar from "../components/AppTopBar";
 import KpiRow from "../components/KpiRow";
 import Pagination from "../components/Pagination";
 import EmptyState from "../components/EmptyState";
-import LoadingSkeleton from "../components/LoadingSkeleton";
 import ErrorBanner from "../components/ErrorBanner";
+import { useAuth } from "../lib/hooks/useAuth";
 
 export default function TareasPage() {
   const router = useRouter();
+  const { token, user } = useAuth();
+  const userRole = user?.role ?? "USER";
+  const userIdFromToken = user?.id ?? 0;
 
   const [tareas, setTareas] = useState<Task[]>([]);
   const [paginatedData, setPaginatedData] = useState<PaginatedTasks | null>(null);
@@ -38,25 +41,7 @@ export default function TareasPage() {
     userId: "",
   });
 
-  const [token, setToken] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState("USER");
-  const [userIdFromToken, setUserIdFromToken] = useState(0);
-
   const menuRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const t = localStorage.getItem("token");
-    if (!t) {
-      router.replace("/login");
-      return;
-    }
-    setToken(t);
-    try {
-      const payload = JSON.parse(atob(t.split(".")[1]));
-      setUserRole(payload.role);
-      setUserIdFromToken(payload.id);
-    } catch {}
-  }, [router]);
 
   const fetchPage = async (page: number, size: number, useFilters: boolean) => {
     if (!token) return;
@@ -167,8 +152,6 @@ export default function TareasPage() {
   const totalPages = paginatedData?.totalPages ?? 0;
   const progreso = tareas.length > 0 ? Math.round((tareasCompletadas / tareas.length) * 100) : 0;
 
-  if (!token) return null;
-
   return (
     <div className="min-h-screen flex items-start justify-center bg-gradient-to-r from-purple-400 to-indigo-500 p-4 sm:p-6">
       <div className="bg-white rounded-xl shadow-lg w-full max-w-5xl p-5 sm:p-7">
@@ -273,26 +256,33 @@ export default function TareasPage() {
         </form>
 
         {/* KPIs compactos */}
-        <KpiRow
-          items={[
-            { value: total, label: "Total tareas", hint: "en total", tone: "primary" },
-            { value: tareasPendientes, label: "Pendientes", hint: "esta página", tone: "warning" },
-            { value: tareasCompletadas, label: "Completadas", hint: "esta página", tone: "success" },
-            { value: `${progreso}%`, label: "Progreso", hint: "de esta página" },
-          ]}
-        />
+        {!loading && (
+          <KpiRow
+            items={[
+              { value: total, label: "Total tareas", hint: "en total", tone: "primary" },
+              { value: tareasPendientes, label: "Pendientes", hint: "esta página", tone: "warning" },
+              { value: tareasCompletadas, label: "Completadas", hint: "esta página", tone: "success" },
+              { value: `${progreso}%`, label: "Progreso", hint: "de esta página" },
+            ]}
+          />
+        )}
 
         {/* Lista de tareas */}
-        <div className="section-heading">
-          <h2 className="section-title">
-            Tareas <span className="section-count">({tareas.length})</span>
-          </h2>
-        </div>
+        {!loading && (
+          <div className="section-heading">
+            <h2 className="section-title">
+              Tareas <span className="section-count">({tareas.length})</span>
+            </h2>
+          </div>
+        )}
 
         {error && <ErrorBanner message={error} />}
 
         {loading ? (
-          <LoadingSkeleton rows={5} />
+          <div className="page-loader">
+            <div className="spinner" aria-hidden="true" />
+            <p>Cargando…</p>
+          </div>
         ) : tareas.length === 0 ? (
           <EmptyState
             title={hasActiveFilters ? "Sin resultados" : "No hay tareas"}
@@ -310,7 +300,7 @@ export default function TareasPage() {
             }
           />
         ) : (
-          <div className="tasks-list">
+          <div className="tasks-list animate-fade-slide-up">
             {tareas.map(t => (
               <article
                 key={t.id}

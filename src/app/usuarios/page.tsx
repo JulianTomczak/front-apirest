@@ -11,11 +11,12 @@ import PageHeader from "../components/PageHeader";
 import AppTopBar from "../components/AppTopBar";
 import Pagination from "../components/Pagination";
 import EmptyState from "../components/EmptyState";
-import LoadingSkeleton from "../components/LoadingSkeleton";
 import ErrorBanner from "../components/ErrorBanner";
+import { useAuth } from "../lib/hooks/useAuth";
 
 export default function UsuariosPage() {
   const router = useRouter();
+  const { token } = useAuth();
 
   const [usuarios, setUsuarios] = useState<UserResponseDTO[]>([]);
   const [paginatedData, setPaginatedData] = useState<PaginatedUsers | null>(null);
@@ -26,17 +27,6 @@ export default function UsuariosPage() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [editUser, setEditUser] = useState<UserResponseDTO | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-
-  // Cargar token solo en cliente
-  useEffect(() => {
-    const t = localStorage.getItem("token");
-    if (!t) {
-      router.replace("/login");
-      return;
-    }
-    setToken(t);
-  }, [router]);
 
   // Cargar usuarios
   const fetchPage = async (page: number, size: number) => {
@@ -87,8 +77,6 @@ export default function UsuariosPage() {
     }
   };
 
-  if (!token) return null;
-
   const totalPages = paginatedData?.totalPages ?? 0;
 
   return (
@@ -107,16 +95,21 @@ export default function UsuariosPage() {
           }
         />
 
-        <div className="section-heading">
-          <h2 className="section-title">
-            Usuarios <span className="section-count">({usuarios.length})</span>
-          </h2>
-        </div>
+        {!loading && (
+          <div className="section-heading">
+            <h2 className="section-title">
+              Usuarios <span className="section-count">({usuarios.length})</span>
+            </h2>
+          </div>
+        )}
 
         {error && <ErrorBanner message={error} />}
 
         {loading ? (
-          <LoadingSkeleton rows={4} height={140} />
+          <div className="page-loader">
+            <div className="spinner" aria-hidden="true" />
+            <p>Cargando…</p>
+          </div>
         ) : usuarios.length === 0 ? (
           <EmptyState
             icon="👥"
@@ -129,7 +122,7 @@ export default function UsuariosPage() {
             }
           />
         ) : (
-          <div className="cards-grid mb-6">
+          <div className="cards-grid mb-6 animate-fade-slide-up">
             {usuarios.map(u => (
               <div key={u.id} className="data-card">
                 <div className="data-card-header">

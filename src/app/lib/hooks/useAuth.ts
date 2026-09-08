@@ -4,40 +4,46 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 
-interface DecodedToken {
+export interface DecodedToken {
   exp: number;
   role?: string;
+  sub?: string;
+  id?: number;
 }
 
 export function useAuth() {
   const router = useRouter();
-  const [auth, setAuth] = useState<{ isAuthenticated: boolean; role?: string } | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<DecodedToken | null>(null);
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
+    const stored = localStorage.getItem("token");
+    if (!stored) {
       router.replace("/login");
+      setIsChecking(false);
       return;
     }
 
     try {
-      const decoded = jwtDecode<DecodedToken>(token);
+      const decoded = jwtDecode<DecodedToken>(stored);
       const now = Date.now() / 1000;
 
       if (decoded.exp && decoded.exp > now) {
-        setAuth({ isAuthenticated: true, role: decoded.role });
+        setToken(stored);
+        setUser(decoded);
       } else {
         localStorage.removeItem("token");
-        setAuth({ isAuthenticated: false });
         router.replace("/login");
       }
     } catch (err) {
       console.error("Token inválido", err);
       localStorage.removeItem("token");
-      setAuth({ isAuthenticated: false });
       router.replace("/login");
+    } finally {
+      setIsChecking(false);
     }
   }, [router]);
 
-  return auth;
+  return { token, user, isChecking };
 }
